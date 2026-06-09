@@ -1,0 +1,12 @@
+# HAMBOTRA FRAMEWORK PERSONNALISE | SPRING MVC 
+mampiasa git : branche main -> manao branche anatiny de tsy tode mi merge vao vita fa manao "pull request" aloha de tsy asina code review fa afaka tode mi merge avy eo
+## Sprint 1
+### Fonctionnalités
+
+FRONT-CONTROLLER-SERVLET : à creer (io no havoka .jar), izay application rehetra testé-na dia mitsatoka(manadalo) ao anatinio servlet io daholo
+-doGet -> processRequest() -> outprint(get URL) : ilay URL no affiché eo am navigateur pour voir si ca marche
+-doPost
+Comment sur le coté de l'application de test ? -> web.xml : declare-na ao ilay controller atao classe principale miteny hoe izay rehetra dia mandalo ao anaty ilay controller daholo
+
+- mitady script mi generer .jar rehefa vita 
+
