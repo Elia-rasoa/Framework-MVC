@@ -10,3 +10,6 @@ Comment sur le coté de l'application de test ? -> web.xml : declare-na ao ilay 
 
 - mitady script mi generer .jar rehefa vita 
 
+ - creer le .tar 
+tar -cvf mon-framework.tar mon-framework/
+
