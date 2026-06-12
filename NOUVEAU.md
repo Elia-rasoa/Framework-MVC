@@ -16,3 +16,12 @@ tar -cvf mon-framework.tar mon-framework/
  - apres cette commande on execute : mvn clean install pour compiler le framework et le place dans le repertoire locale de maven 
  pour qu'il soit pret à etre utilisé 
 
+ - compilation
+  javac --release 17 -cp "lib/servlet-api.jar" -d . src/main/java/servlet/framework/FrontControllerServlet.java
+
+  - creer le .jar
+   jar -cf servlet.jar servlet
+
+   - puis creation du .war dans le projet de test
+   jar cvf AppTest.war .
+
