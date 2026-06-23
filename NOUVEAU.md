@@ -25,3 +25,24 @@ tar -cvf mon-framework.tar mon-framework/
    - puis creation du .war dans le projet de test
    jar cvf AppTest.war .
 
+### Sprint 2
+but : Quelle methdode est appeller par un url
+
+Creation : Annotation sur une methode avec une variable
+
+@UrlMapping("/emp/list") "/emp/list" par defaut, c'est la methode qui est appeller quand on tape cette url
+
+= emp/list => EmpCOntroller - methode listEmp()
+= emp/add => EmpController - methode addEmp()
+
+gesiont des erreurs si url non touver : on dis 404 et liste tout les url disponible dans le projet
+
+### Sprint 3
+tohiny sprint 2
+Url ho an get
+Url ho an post
+mampiasa meth equals surdefini (mi test hoe mitovy sa tsia ilay url)
+meth: map<URL/(Get/Post),Class/method>, cle: utilmethod -> contenir hoe ity url de ity ny metohd (post / get) , valeur : Classe na methode 
+
+### Sprint 3 bis
+miantso an'ilay fonction mifanaraka @ url
