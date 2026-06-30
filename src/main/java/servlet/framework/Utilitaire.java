@@ -1,39 +1,47 @@
 package servlet.framework;
 
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import jakarta.servlet.ServletContext;
+import servlet.annotations.UrlMapping;
 
 public class Utilitaire {
 
-    public static List<Class<?>> findAnnotatedClasses(String packageName, Class<? extends Annotation> annotation, ServletContext context) {
-        List<Class<?>> annotatedClasses = new ArrayList<>();
+    public static Map<String, Mapping> scanControllersAndUrls(String packageName, Class<? extends Annotation> controllerAnnotation, ServletContext context) {
+        Map<String, Mapping> urlMap = new HashMap<>();
         try {
-            // Convertit "etu.controller" en "/WEB-INF/classes/etu/controller/"
             String path = "/WEB-INF/classes/" + packageName.replace('.', '/') + "/";
-            
-            // Demande à Tomcat la liste des fichiers dans ce dossier virtuel
             Set<String> resourcePaths = context.getResourcePaths(path);
             
             if (resourcePaths != null) {
                 for (String resourcePath : resourcePaths) {
-                    // On n'analyse que les fichiers compilés .class
                     if (resourcePath.endsWith(".class")) {
-                        // Extrait le nom du fichier (ex: Test1.class)
                         String fileName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
-                        // Reconstitue le nom complet qualifié (ex: etu.controller.Test1)
                         String className = packageName + "." + fileName.substring(0, fileName.length() - 6);
                         
                         try {
                             Class<?> clazz = Class.forName(className);
-                            // Vérification : est-ce que l'annotation est présente sur la classe ?
-                            if (clazz.isAnnotationPresent(annotation)) {
-                                annotatedClasses.add(clazz);
+                            
+                            // 1. On vérifie si la classe est bien un @Controller
+                            if (clazz.isAnnotationPresent(controllerAnnotation)) {
+                                
+                                // 2. On scanne toutes les méthodes de ce contrôleur
+                                for (Method method : clazz.getDeclaredMethods()) {
+                                    // 3. Si la méthode possède @UrlMapping, on l'enregistre
+                                    if (method.isAnnotationPresent(UrlMapping.class)) {
+                                        UrlMapping urlAnno = method.getAnnotation(UrlMapping.class);
+                                        String urlValue = urlAnno.value();
+                                        
+                                        // On stocke l'URL et son Mapping associé
+                                        urlMap.put(urlValue, new Mapping(clazz.getName(), method.getName()));
+                                    }
+                                }
                             }
                         } catch (ClassNotFoundException e) {
-                            // Ignore si la classe ne peut pas être chargée
+                        
                         }
                     }
                 }
@@ -41,6 +49,6 @@ public class Utilitaire {
         } catch (Exception e) {
             System.err.println("[Framework Utilitaire] Erreur de scan : " + e.getMessage());
         }
-        return annotatedClasses;
+        return urlMap;
     }
 }

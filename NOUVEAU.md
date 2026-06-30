@@ -1,5 +1,19 @@
 # HAMBOTRA FRAMEWORK PERSONNALISE | SPRING MVC 
 mampiasa git : branche main -> manao branche anatiny de tsy tode mi merge vao vita fa manao "pull request" aloha de tsy asina code review fa afaka tode mi merge avy eo
+
+### compilation
+javac --release 17 -d bin -cp "lib/*:." src/main/java/servlet/*/*.java
+javac --release 17 -d web/WEB-INF/classes/ src/etu/controller/Test1.java -cp "web/WEB-INF/lib/*:."
+### Creation jar et war
+. cd bin
+jar -cvf Sprint1.jar servlet/
+-- fijerevana ny ao anatiny
+jar tf web/WEB-INF/lib/Sprint1.jar
+
+. cd web
+jar -cvf AppTest.war WEB-INF/
+
+
 ## Sprint 1
 ### Fonctionnalités
 
