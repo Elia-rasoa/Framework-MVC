@@ -16,58 +16,60 @@ public class FrontControllerServlet extends HttpServlet {
         response.setContentType("text/plain;charset=UTF-8");
         PrintWriter out = response.getWriter();
         
-        // Extraction de l'URL relative
+        // 1. Récupération de l'URL demandée et de la méthode HTTP (GET, POST, etc.)
         String contextPath = request.getContextPath();
         String requestURI = request.getRequestURI();
         String urlTapee = requestURI.substring(contextPath.length());
+        String methodeHttpTapee = request.getMethod(); // "GET" ou "POST"
         
-        out.println("URL demandée : " + urlTapee);
+        out.println("Requête reçue : [" + methodeHttpTapee + "] " + urlTapee);
         out.println("------------------------------------------------------------------");
         
-        // Récupération de la table de mapping stockée par le Listener dans le ServletContext
+        // 2. Récupération de la table construite par le Listener
         @SuppressWarnings("unchecked")
-        Map<String, Mapping> urlMappingMap = (Map<String, Mapping>) this.getServletContext().getAttribute("urlMappingTable");
+        Map<UrlKey, Mapping> urlMappingMap = (Map<UrlKey, Mapping>) this.getServletContext().getAttribute("urlMappingTable");
 
-        // Sécurité au cas où le listener n'aurait rien partagé
         if (urlMappingMap == null) {
-            out.println("ERREUR INTERNE : La table de routage du framework n'est pas initialisée.");
+            out.println("ERREUR INTERNE : La table de routage n'a pas été initialisée par le Listener.");
             return;
         }
 
-        // Vérification de l'existence de l'URL
-        if (urlMappingMap.containsKey(urlTapee)) {
-            Mapping mapping = urlMappingMap.get(urlTapee);
+        // 3. Création de la clé correspondante pour la recherche dans la Map
+        UrlKey cleRecherche = new UrlKey(urlTapee, methodeHttpTapee);
+
+        if (urlMappingMap.containsKey(cleRecherche)) {
+            Mapping mapping = urlMappingMap.get(cleRecherche);
             
-            out.println("[Framework] URL Associée avec succès !");
-            out.println("Contrôleur : " + mapping.getClassName());
-            out.println("Méthode invoquée : " + mapping.getMethod() + "()");
+            out.println("[Framework] Correspondance trouvée !");
+            out.println("Contrôleur ciblé  : " + mapping.getClassName());
+            out.println("Méthode à appeler : " + mapping.getMethod() + "()");
             
         } else {
-            // Gestion de l'erreur 404
+            // Gestion de l'erreur 404 si la clé n'existe pas
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            out.println("ERREUR 404 : L'URL '" + urlTapee + "' n'existe pas dans ce framework.");
+            out.println("ERREUR 404 : La route '" + urlTapee + "' pour la méthode [" + methodeHttpTapee + "] n'existe pas.");
             out.println("------------------------------------------------------------------");
-            out.println("Liste des URLs disponibles dans votre projet de test :");
+            out.println("Liste des URLs disponibles dans votre projet :");
             
             if (urlMappingMap.isEmpty()) {
-                out.println(" -> Aucune URL n'a été configurée dans les contrôleurs.");
+                out.println(" -> Aucune URL n'a été configurée.");
             } else {
-                for (Map.Entry<String, Mapping> entry : urlMappingMap.entrySet()) {
-                    out.println(" * URL : " + entry.getKey() + "  =>  Méthode : " + entry.getValue().getClassName() + "." + entry.getValue().getMethod() + "()");
+                for (Map.Entry<UrlKey, Mapping> entry : urlMappingMap.entrySet()) {
+                    UrlKey key = entry.getKey();
+                    Mapping map = entry.getValue();
+                    out.println(" * [" + key.getHttpMethod() + "] " + key.getUrl() + "  =>  " + map.getClassName() + "." + map.getMethod() + "()");
                 }
             }
         }
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         processRequest(request, response);
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         processRequest(request, response);
     }
 }

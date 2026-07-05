@@ -13,21 +13,24 @@ public class FrameworkListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        System.out.println("[Framework] Initialisation via FrameworkListener...");
+        System.out.println("[Framework] Initialisation via FrameworkListener au démarrage...");
         ServletContext context = sce.getServletContext();
 
-        // Récupère le paramètre global du contexte (ex: configuré dans le web.xml)
         String packageToScan = context.getInitParameter("packageScan");
-        Map<String, Mapping> urlMappingMap = new HashMap<>();
+        Map<UrlKey, Mapping> urlMappingMap = new HashMap<>();
 
         if (packageToScan != null && !packageToScan.trim().isEmpty()) {
-            // Utilisation de votre classe utilitaire
-            urlMappingMap = Utilitaire.scanControllersAndUrls(packageToScan, Controller.class, context);
+            try {
+                urlMappingMap = Utilitaire.scanControllersAndUrls(packageToScan, Controller.class, context);
+                System.out.println("[Framework] Scan terminé avec succès. " + urlMappingMap.size() + " URLs chargées.");
+            } catch (Exception e) {
+                System.err.println(" [FRAMEWORK ERREUR CRITIQUE DE ROUTAGE] : " + e.getMessage());
+                // On lève une RuntimeException pour stopper le déploiement de Tomcat si conflit il y a
+                throw new RuntimeException(e);
+            }
         }
 
-        System.out.println("[Framework] Listener terminé. Nombre d'URLs chargées : " + urlMappingMap.size());
-
-        // On stocke la Map dans le contexte de l'application pour que la Servlet puisse y accéder
+        // On partage la table de routage globale au contexte de l'application
         context.setAttribute("urlMappingTable", urlMappingMap);
     }
 
