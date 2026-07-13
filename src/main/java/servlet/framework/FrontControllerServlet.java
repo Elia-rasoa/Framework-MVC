@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.util.Map;
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,86 +15,73 @@ public class FrontControllerServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        response.setContentType("text/plain;charset=UTF-8");
-        PrintWriter out = response.getWriter();
+        // 1. On lit les configurations dans le web.xml du projet de test
+        String prefix = this.getServletContext().getInitParameter("viewPrefix");
+        String suffix = this.getServletContext().getInitParameter("viewSuffix");
         
-        // 1. Récupération de l'URL demandée et de la méthode HTTP
         String contextPath = request.getContextPath();
         String requestURI = request.getRequestURI();
         String urlTapee = requestURI.substring(contextPath.length());
         String methodeHttpTapee = request.getMethod(); 
-        
-        out.println("Requête reçue : [" + methodeHttpTapee + "] " + urlTapee);
-        out.println("------------------------------------------------------------------");
-        
-        // 2. Récupération de la table construite par le Listener
+
         @SuppressWarnings("unchecked")
         Map<UrlKey, Mapping> urlMappingMap = (Map<UrlKey, Mapping>) this.getServletContext().getAttribute("urlMappingTable");
 
-        if (urlMappingMap == null) {
-            out.println("ERREUR INTERNE : La table de routage n'a pas été initialisée par le Listener.");
-            return;
-        }
-
-        // 3. Création de la clé correspondante pour la recherche dans la Map
         UrlKey cleRecherche = new UrlKey(urlTapee, methodeHttpTapee);
 
-        if (urlMappingMap.containsKey(cleRecherche)) {
+        if (urlMappingMap != null && urlMappingMap.containsKey(cleRecherche)) {
             Mapping mapping = urlMappingMap.get(cleRecherche);
             
-            out.println("[Framework] Correspondance trouvée !");
-            out.println("Contrôleur ciblé  : " + mapping.getClassName());
-            out.println("Méthode trouvée   : " + mapping.getMethod() + "()");
-            out.println("------------------------------------------------------------------");
-            
             try {
-                // EXÉCUTION DYNAMIQUE DU CONTRÔLEUR VIA LA RÉFLEXION :
-                
-                // a. Charger la classe du contrôleur
+                // 2. Instanciation du contrôleur de test par réflexion
                 Class<?> clazz = Class.forName(mapping.getClassName());
-                
-                // b. Instancier la classe (créer un nouvel objet, ex: new Test1())
-                // Note : cela nécessite un constructeur vide par défaut dans votre contrôleur
                 Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
-                
-                // c. Récupérer la méthode précise (sans paramètres pour le moment)
                 Method methodToInvoke = clazz.getDeclaredMethod(mapping.getMethod());
                 
-                // d. Invoquer (exécuter) la méthode sur notre instance de contrôleur
-                // invoke() renvoie un type Object contenant la valeur retournée par la méthode
-                Object returnValue = methodToInvoke.invoke(controllerInstance);
+                // 3. Exécution de la méthode qui renvoie le ModelAndView
+                Object result = methodToInvoke.invoke(controllerInstance);
                 
-                // e. Gérer et afficher le résultat de la valeur de retour
-                out.println("[Framework - Résultat de l'exécution]");
-                if (returnValue != null) {
-                    out.println("Type de retour     : " + returnValue.getClass().getName());
-                    out.println("Valeur de retour   : " + returnValue.toString());
+                if (result instanceof ModelAndView) {
+                    ModelAndView mv = (ModelAndView) result;
+                    
+                    // CAS 1 : La vue est null ou vide (On teste UNIQUEMENT avec nos variables)
+                    if (mv.getView() == null || mv.getView().trim().isEmpty()) {
+                        response.setContentType("text/plain;charset=UTF-8");
+                        PrintWriter out = response.getWriter();
+                        out.println("[Framework - Test de variable ModelAndView]");
+                        out.println("Aucune page demandée (la vue est null).");
+                        out.println("Voici les variables stockées dans le modèle : " + mv.getModel());
+                    } 
+                    // CAS 2 : La vue est renseignée (On gère le fichier d'affichage réel)
+                    else {
+                        String cheminCompletJSP = prefix + mv.getView() + suffix;
+                        
+                        if (mv.getModel() != null) {
+                            for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
+                                request.setAttribute(entry.getKey(), entry.getValue());
+                            }
+                        }
+                        
+                        RequestDispatcher dispatcher = request.getRequestDispatcher(cheminCompletJSP);
+                        dispatcher.forward(request, response);
+                    }
                 } else {
-                    // Si la méthode est 'public void', returnValue sera toujours null
-                    out.println("Valeur de retour   : (La méthode ne retourne rien : void ou null)");
+                    response.setContentType("text/plain;charset=UTF-8");
+                    PrintWriter out = response.getWriter();
+                    out.println("Le contrôleur n'a pas retourné un ModelAndView.");
                 }
 
             } catch (Exception e) {
-                out.println("❌ ERREUR lors de l'exécution du contrôleur : " + e.getMessage());
-                e.printStackTrace(out); // Affiche la pile d'erreur directement sur l'écran pour vous aider à débugger
+                response.setContentType("text/plain;charset=UTF-8");
+                PrintWriter out = response.getWriter();
+                out.println("❌ Erreur d'exécution : " + e.getMessage());
+                e.printStackTrace(out);
             }
-            
         } else {
-            // Gestion de l'erreur 404
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            out.println("ERREUR 404 : La route '" + urlTapee + "' pour la méthode [" + methodeHttpTapee + "] n'existe pas.");
-            out.println("------------------------------------------------------------------");
-            out.println("Liste des URLs disponibles dans votre projet :");
-            
-            if (urlMappingMap.isEmpty()) {
-                out.println(" -> Aucune URL n'a été configurée.");
-            } else {
-                for (Map.Entry<UrlKey, Mapping> entry : urlMappingMap.entrySet()) {
-                    UrlKey key = entry.getKey();
-                    Mapping map = entry.getValue();
-                    out.println(" * [" + key.getHttpMethod() + "] " + key.getUrl() + "  =>  " + map.getClassName() + "." + map.getMethod() + "()");
-                }
-            }
+            response.setContentType("text/plain;charset=UTF-8");
+            PrintWriter out = response.getWriter();
+            out.println("ERREUR 404 : Route introuvable.");
         }
     }
 
