@@ -12,16 +12,16 @@ import servlet.annotations.Controller;
 public class FrameworkListener implements ServletContextListener {
 
     @Override
-    public void contextInitialized(ServletContextEvent sce) {
+    public void contextInitialized(ServletContextEvent servletcontentEvent) {
         System.out.println("[Framework] Initialisation via FrameworkListener au démarrage...");
-        ServletContext context = sce.getServletContext();
+        ServletContext context = servletcontentEvent.getServletContext();
 
         String packageToScan = context.getInitParameter("packageScan");
         Map<UrlKey, Mapping> urlMappingMap = new HashMap<>();
 
         if (packageToScan != null && !packageToScan.trim().isEmpty()) {
             try {
-                urlMappingMap = Utilitaire.scanControllersAndUrls(packageToScan, Controller.class, context);
+                Utilitaire.scanControllersAndUrls(packageToScan, Controller.class, context, urlMappingMap);
                 System.out.println("[Framework] Scan terminé avec succès. " + urlMappingMap.size() + " URLs chargées.");
             } catch (Exception e) {
                 System.err.println(" [FRAMEWORK ERREUR CRITIQUE DE ROUTAGE] : " + e.getMessage());
