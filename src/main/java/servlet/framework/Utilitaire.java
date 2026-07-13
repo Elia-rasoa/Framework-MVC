@@ -10,11 +10,9 @@ import servlet.annotations.UrlMapping;
 
 public class Utilitaire {
 
-    public static Map<UrlKey, Mapping> scanControllersAndUrls(String packageName, 
+    public static void scanControllersAndUrls(String packageName, 
         Class<? extends Annotation> controllerAnnotation, 
-        ServletContext context) throws Exception {
-
-        Map<UrlKey, Mapping> urlMap = new HashMap<>();
+        ServletContext context, Map<UrlKey, Mapping> urlMap) throws Exception {
         
         String path = "/WEB-INF/classes/" + packageName.replace('.', '/') + "/";
         Set<String> resourcePaths = context.getResourcePaths(path);
@@ -53,6 +51,5 @@ public class Utilitaire {
                 }
             }
         }
-        return urlMap;
     }
 }

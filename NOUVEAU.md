@@ -60,8 +60,17 @@ meth: map<URL/(Get/Post),Class/method>, cle: utilmethod -> contenir hoe ity url 
 
 ### Sprint 3 bis
 miantso an'ilay fonction mifanaraka @ url
-fonction mi affiche ny valeur de retour 
+fonction mi affiche ny valeur de retour-
 
 
-### Sprint 4 
+### Sprint 4
 avadika atao anaty listener ilay map
+
+### Sprint 5
+manambotra model and view
+web.xml (test): suffixe (WEB-inf/dossier)
+                prefixe (.jsp)
+controller (test) : afaka atao anaty variable ilay zavatra affiche-na
+                     afaka ilay chemin misy ilay affichage no atao anaty model and view
+
+### Sprint 5 bis
