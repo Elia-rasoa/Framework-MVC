@@ -15,7 +15,6 @@ public class FrontControllerServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // 1. On lit les configurations dans le web.xml du projet de test
         String prefix = this.getServletContext().getInitParameter("viewPrefix");
         String suffix = this.getServletContext().getInitParameter("viewSuffix");
         
@@ -33,42 +32,50 @@ public class FrontControllerServlet extends HttpServlet {
             Mapping mapping = urlMappingMap.get(cleRecherche);
             
             try {
-                // 2. Instanciation du contrôleur de test par réflexion
                 Class<?> clazz = Class.forName(mapping.getClassName());
                 Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
-                Method methodToInvoke = clazz.getDeclaredMethod(mapping.getMethod());
                 
-                // 3. Exécution de la méthode qui renvoie le ModelAndView
-                Object result = methodToInvoke.invoke(controllerInstance);
+                // --- Étape 2.1 : Gestion dynamique des paramètres de la méthode ---
+                Method[] methods = clazz.getDeclaredMethods();
+                Method methodToInvoke = null;
+                for (Method m : methods) {
+                    if (m.getName().equals(mapping.getMethod())) {
+                        methodToInvoke = m;
+                        break;
+                    }
+                }
+
+                Object result;
+                // Si la méthode demande l'objet HttpServletRequest en paramètre, on lui donne
+                if (methodToInvoke.getParameterCount() == 1 && methodToInvoke.getParameterTypes()[0].equals(HttpServletRequest.class)) {
+                    result = methodToInvoke.invoke(controllerInstance, request);
+                } else {
+                    result = methodToInvoke.invoke(controllerInstance);
+                }
+                // -----------------------------------------------------------------
                 
                 if (result instanceof ModelAndView) {
                     ModelAndView mv = (ModelAndView) result;
                     
-                    // CAS 1 : La vue est null ou vide (On teste UNIQUEMENT avec nos variables)
                     if (mv.getView() == null || mv.getView().trim().isEmpty()) {
                         response.setContentType("text/plain;charset=UTF-8");
                         PrintWriter out = response.getWriter();
-                        out.println("[Framework - Test de variable ModelAndView]");
-                        out.println("Aucune page demandée (la vue est null).");
-                        out.println("Voici les variables stockées dans le modèle : " + mv.getModel());
-                    } 
-                    // CAS 2 : La vue est renseignée (On gère le fichier d'affichage réel)
-                    else {
+                        out.println("[Framework - Test de variable ModelAndView (Base de données Spring)]");
+                        out.println("Voici les variables récupérées via Spring Service : " + mv.getModel());
+                    } else {
                         String cheminCompletJSP = prefix + mv.getView() + suffix;
-                        
                         if (mv.getModel() != null) {
                             for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
                                 request.setAttribute(entry.getKey(), entry.getValue());
                             }
                         }
-                        
                         RequestDispatcher dispatcher = request.getRequestDispatcher(cheminCompletJSP);
                         dispatcher.forward(request, response);
                     }
                 } else {
                     response.setContentType("text/plain;charset=UTF-8");
                     PrintWriter out = response.getWriter();
-                    out.println("Le contrôleur n'a pas retourné un ModelAndView.");
+                    out.println("Le contrôleur n'a pas retourné un ModelAndView. Résultat : " + result);
                 }
 
             } catch (Exception e) {

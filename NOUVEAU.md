@@ -4,6 +4,7 @@ mampiasa git : branche main -> manao branche anatiny de tsy tode mi merge vao vi
 ### compilation
 javac --release 17 -d bin -cp "lib/*:." src/main/java/servlet/*/*.java
 javac --release 17 -d web/WEB-INF/classes/ src/etu/controller/Test1.java -cp "web/WEB-INF/lib/*:."
+javac --release 17 -d web/WEB-INF/classes/ -cp "web/WEB-INF/lib/*:." $(find src -name "*.java")
 ### Creation jar et war
 . cd bin
 jar -cvf Sprint1.jar servlet/

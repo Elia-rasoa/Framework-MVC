@@ -1,41 +1,69 @@
 package servlet.framework;
 
+import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import jakarta.servlet.ServletContext;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import jakarta.servlet.annotation.WebListener;
 import servlet.annotations.Controller;
+import servlet.annotations.UrlMapping;
 
-@WebListener
 public class FrameworkListener implements ServletContextListener {
 
     @Override
-    public void contextInitialized(ServletContextEvent servletcontentEvent) {
-        System.out.println("[Framework] Initialisation via FrameworkListener au démarrage...");
-        ServletContext context = servletcontentEvent.getServletContext();
+    public void contextInitialized(ServletContextEvent sce) {
+        try {
+            // 1. Récupération et sauvegarde du contexte Spring
+            WebApplicationContext springContext = WebApplicationContextUtils
+                    .getRequiredWebApplicationContext(sce.getServletContext());
+            sce.getServletContext().setAttribute("springContext", springContext);
+            System.out.println("[Framework] Pont établi avec le contexte Spring avec succès !");
 
-        String packageToScan = context.getInitParameter("packageScan");
-        Map<UrlKey, Mapping> urlMappingMap = new HashMap<>();
-
-        if (packageToScan != null && !packageToScan.trim().isEmpty()) {
-            try {
-                Utilitaire.scanControllersAndUrls(packageToScan, Controller.class, context, urlMappingMap);
-                System.out.println("[Framework] Scan terminé avec succès. " + urlMappingMap.size() + " URLs chargées.");
-            } catch (Exception e) {
-                System.err.println(" [FRAMEWORK ERREUR CRITIQUE DE ROUTAGE] : " + e.getMessage());
-                // On lève une RuntimeException pour stopper le déploiement de Tomcat si conflit il y a
-                throw new RuntimeException(e);
+            // 2. Scan de ton package de contrôleurs habituel
+            Map<UrlKey, Mapping> urlMappingTable = new HashMap<>();
+            String packageScan = sce.getServletContext().getInitParameter("packageScan");
+            
+            if (packageScan != null) {
+                String path = packageScan.replace('.', '/');
+                ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                URL resource = classLoader.getResource(path);
+                
+                if (resource != null) {
+                    File directory = new File(resource.getFile());
+                    if (directory.exists()) {
+                        for (File file : directory.listFiles()) {
+                            if (file.getName().endsWith(".class")) {
+                                String className = packageScan + "." + file.getName().replace(".class", "");
+                                Class<?> clazz = Class.forName(className);
+                                
+                                if (clazz.isAnnotationPresent(Controller.class)) {
+                                    for (Method method : clazz.getDeclaredMethods()) {
+                                        if (method.isAnnotationPresent(UrlMapping.class)) {
+                                            UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
+                                            UrlKey key = new UrlKey(urlMapping.value(), urlMapping.method());
+                                            Mapping mapping = new Mapping(className, method.getName());
+                                            urlMappingTable.put(key, mapping);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+            sce.getServletContext().setAttribute("urlMappingTable", urlMappingTable);
+            System.out.println("[Framework] Scan terminé. " + urlMappingTable.size() + " route(s) chargée(s).");
+            
+        } catch (Exception e) {
+            System.out.println("[Framework] ❌ Erreur d'initialisation du framework : " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // On partage la table de routage globale au contexte de l'application
-        context.setAttribute("urlMappingTable", urlMappingMap);
     }
 
     @Override
-    public void contextDestroyed(ServletContextEvent sce) {
-        System.out.println("[Framework] Arrêt de l'application.");
-    }
+    public void contextDestroyed(ServletContextEvent sce) {}
 }
